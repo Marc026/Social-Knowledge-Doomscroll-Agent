@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  agent:
+    build: .
+    image: doomscroll-agent
+    container_name: doomscroll-agent
+    env_file: .env
+    volumes:
+      - agent-data:/app/data
+    # Override CMD for scheduled mode
+    command:
+      - "--subreddits"
+      - "wallstreetbets"
+      - "investing"
+      - "technology"
+      - "--sort"
+      - "hot"
+      - "--limit"
+      - "25"
+      - "--schedule"
+      - "--interval"
+      - "3600"
+    restart: unless-stopped
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: doomscroll-n8n
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=changeme
+      - WEBHOOK_URL=http://localhost:5678/
+    volumes:
+      - n8n-data:/home/node/.n8n
+      - ./n8n:/workflows         # mount workflow JSON for import
+      - agent-data:/app/data     # shared data volume so n8n can call agent stats
+    restart: unless-stopped
+
+volumes:
+  agent-data:
+  n8n-data:
